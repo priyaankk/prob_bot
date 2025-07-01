@@ -20,7 +20,7 @@ def webhook():
 def home():
     return "Bot is live!"
 
-def analyze_nifty_move(target_level, target_date_str):
+def analyze_nifty_move(target_level, date_or_days_str):
     ticker = yf.Ticker("^NSEI")
     now = datetime.now()
     is_market_hours = 9 <= now.hour <= 15
@@ -32,10 +32,15 @@ def analyze_nifty_move(target_level, target_date_str):
     direction = "up" if pct_move_needed > 0 else "down"
     abs_pct_move = abs(pct_move_needed)
 
-    target_date = datetime.strptime(target_date_str, "%d/%m/%Y")
-    days = (target_date - now).days
+    # ✅ Determine days till expiry from date or int
+    try:
+        days = int(date_or_days_str)
+    except ValueError:
+        target_date = datetime.strptime(date_or_days_str, "%d/%m/%Y")
+        days = (target_date - now).days
+
     if days <= 0:
-        return "Target date must be in the future."
+        return "Target date must be in the future or a positive number of days."
 
     count = 0
     for i in range(len(hist) - days):
@@ -50,7 +55,8 @@ def analyze_nifty_move(target_level, target_date_str):
            (pct_change >= abs_pct_move and direction == "up"):
             count += 1
 
-    return f"NIFTY needs to move {direction} by {target_price-current_price} {abs_pct_move:.2f}% in {days} days.\n" \
+    return f"NIFTY needs to move {direction} by {target_price - current_price:.2f} points " \
+           f"({abs_pct_move:.2f}%) in {days} days.\n" \
            f"Such a move has happened {count} times in the last 10 years."
 
 def handle_message(update):
