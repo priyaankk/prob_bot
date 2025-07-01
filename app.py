@@ -28,12 +28,14 @@ def analyze_nifty_move(target_level, target_date_str):
 
     current_price = hist.iloc[-1]['Open'] if is_market_hours else hist.iloc[-1]['Close']
     target_price = float(target_level)
-    move_needed = target_price - current_price
-    direction = "up" if move_needed > 0 else "down"
-    abs_move = abs(move_needed)
+    pct_move_needed = ((target_price - current_price) / current_price) * 100
+    direction = "up" if pct_move_needed > 0 else "down"
+    abs_pct_move = abs(pct_move_needed)
 
     target_date = datetime.strptime(target_date_str, "%d/%m/%Y")
     days = (target_date - now).days
+    if days <= 0:
+        return "Target date must be in the future."
 
     count = 0
     for i in range(len(hist) - days):
@@ -41,11 +43,14 @@ def analyze_nifty_move(target_level, target_date_str):
         end = hist.iloc[i + days]
         start_price = start['Open'] if is_market_hours else start['Close']
         end_price = end['Close']
-        if (start_price - end_price >= abs_move and direction == "down") or \
-           (end_price - start_price >= abs_move and direction == "up"):
+
+        pct_change = ((end_price - start_price) / start_price) * 100
+
+        if (pct_change <= -abs_pct_move and direction == "down") or \
+           (pct_change >= abs_pct_move and direction == "up"):
             count += 1
 
-    return f"NIFTY needs to move {direction} by {abs_move:.2f} in {days} days.\n" \
+    return f"NIFTY needs to move {direction} by {target_price-current_price} {abs_pct_move:.2f}% in {days} days.\n" \
            f"Such a move has happened {count} times in the last 10 years."
 
 def handle_message(update):
